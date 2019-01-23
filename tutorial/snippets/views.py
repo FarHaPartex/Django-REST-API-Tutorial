@@ -1,29 +1,34 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 from .models import Snippet
 from .serializers import SnippetSerializer
+from rest_framework import status 
+from rest_framework.response import Response
 
 @csrf_exempt
-def snipper_list(request):
+@api_view(['GET','POST'])
+def snipper_list(request, format=None):
+
     if request.method == 'GET':
         snippets = Snippet.objects.all()
         serializer = SnippetSerializer(snippets, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data)
 
     elif request.method == 'POST':
-        data = JSONParser().parser(request)
-        serializer = SnippetSerializer(data=data)
+        #data = JSONParser().parser(request)
+        serializer = SnippetSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
-        return JsonResponse(serializer.error, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.error, status=status.HTTP_400_BAD_REQUEST)
     
 
 @csrf_exempt
-def snipper_details(request,pk):
+@api_view(['GET','PUT','DELETE'])
+def snipper_details(request,pk, format=None):
     """
     Retrieve, update or delete a code snippet.
     """
@@ -31,20 +36,20 @@ def snipper_details(request,pk):
     try:
         snippet = Snippet.objects.get(pk=pk)
     except snippet.DoesNotExit:
-        return HttpResponse(status=404)
+        return Response(status=status.HTTP_400_NOT_FOUND)
     
     if request.method == 'GET':
         serializer = SnippetSerializer(snippet)
-        return JsonResponse(serializer.data)
+        return Response(serializer.data)
     
     elif request.method == 'PUT':
         data = JSONParser().parser(request)
         serializer = SnippetSerializer(snippet,data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
-        return JsonResponse(serializer.error, status=400)
+            return Response(serializer.data)
+        return Response(serializer.error, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
         snippet.delete()
-        return HttpResponse(status=204)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
